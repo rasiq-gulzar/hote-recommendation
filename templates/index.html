@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kashmir Hotel Recommendation</title>
+  <style>
+    :root { --bg:#f3f6fb; --card:#fff; --ink:#172033; --muted:#64748b; --line:#dbe3ee; --accent:#176b87; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Inter,Segoe UI,Arial,sans-serif; background:var(--bg); color:var(--ink); }
+    header { background:linear-gradient(135deg,#123247,#176b87); color:white; padding:30px 20px; }
+    header .wrap, main { max-width:1180px; margin:auto; }
+    h1 { margin:0 0 8px; font-size:clamp(1.5rem,3vw,2.25rem); }
+    header p { margin:0; color:#e0f2fe; }
+    main { padding:24px 18px 42px; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:20px; box-shadow:0 8px 24px #1720330b; }
+    .panel h2 { margin:0 0 6px; font-size:1.2rem; }
+    .hint { color:var(--muted); font-size:.92rem; margin:0 0 18px; line-height:1.5; }
+    .examples { display:flex; gap:10px; flex-wrap:wrap; }
+    button { cursor:pointer; border:0; border-radius:9px; padding:11px 15px; font-weight:650; font-size:.94rem; }
+    .example { background:#e5f3f8; color:#12536a; border:1px solid #c4e5ef; }
+    .submit { background:var(--accent); color:white; padding:13px 22px; }
+    .reset { background:#eef2f7; color:#334155; }
+    .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:15px; }
+    .field { min-width:0; }
+    label { display:block; font-size:.88rem; font-weight:650; margin:0 0 6px; }
+    input, select { width:100%; border:1px solid #cbd5e1; border-radius:8px; padding:10px 11px; font:inherit; background:white; color:var(--ink); }
+    input:focus, select:focus { outline:2px solid #9bd6e7; border-color:var(--accent); }
+    .check { display:flex; align-items:center; gap:9px; border:1px solid var(--line); padding:11px; border-radius:8px; min-height:43px; }
+    .check input { width:auto; }
+    .actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:22px; }
+    .result { border-left:5px solid #15936b; }
+    .result.error { border-left-color:#c2410c; }
+    .prediction { font-size:1.5rem; font-weight:800; color:#12674f; margin:8px 0; overflow-wrap:anywhere; }
+    .error .prediction { color:#9a3412; }
+    .small { color:var(--muted); font-size:.88rem; }
+    @media(max-width:850px) { .grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+    @media(max-width:560px) { .grid { grid-template-columns:1fr; } .panel { padding:16px; } }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Kashmir Hotel Recommendation</h1>
+    <p>Enter trip, budget, property and location details to get a decision-tree prediction.</p>
+  </div>
+</header>
+<main>
+  <section class="panel">
+    <h2>Try the sample inputs</h2>
+    <p class="hint">Load one example at a time, then click “Predict recommendation”. You can edit any field before submitting.</p>
+    <div class="examples">
+      <button class="example" type="button" onclick="loadExample(0)">Example 1 · Gulmarg</button>
+      <button class="example" type="button" onclick="loadExample(1)">Example 2 · Srinagar</button>
+      <button class="example" type="button" onclick="loadExample(2)">Example 3 · Gulmarg</button>
+      <button class="reset" type="button" onclick="document.getElementById('hotel-form').reset()">Reset form</button>
+    </div>
+  </section>
+
+  <section class="panel result">
+    <h2>Prediction result</h2>
+    <div class="prediction">{{ prediction }}</div>
+    <p class="small">Predicted label returned by decision_tree.pkl.</p>
+  </section>
+
+  <section class="panel result error">
+    <h2>Could not make a prediction</h2>
+    <div class="prediction">{{ error }}</div>
+    <p class="small">Check the Flask console for the full traceback and confirm the model's expected input format.</p>
+  </section>
+ 
+
+  <form id="hotel-form" class="panel" method="POST" action="#">
+    <h2>Trip and guest details</h2>
+    <p class="hint">Categorical values must match the labels used during training. Boolean requirements are sent as 0 or 1.</p>
+    <div class="grid">
+      <div class="field"><label for="user_budget_total_inr">Total budget (INR)</label><input id="user_budget_total_inr" name="user_budget_total_inr" type="number" min="0" step="any" required value="65400"></div>
+      <div class="field"><label for="user_daily_budget_inr">Daily budget (INR)</label><input id="user_daily_budget_inr" name="user_daily_budget_inr" type="number" min="0" step="any" required value="32700"></div>
+      <div class="field"><label for="stay_days">Stay days</label><input id="stay_days" name="stay_days" type="number" min="1" required value="2"></div>
+      <div class="field"><label for="family_count">Family / group count</label><input id="family_count" name="family_count" type="number" min="1" required value="4"></div>
+      <div class="field"><label for="adults_count">Adults</label><input id="adults_count" name="adults_count" type="number" min="0" required value="4"></div>
+      <div class="field"><label for="children_count">Children</label><input id="children_count" name="children_count" type="number" min="0" required value="0"></div>
+      <div class="field"><label for="seniors_count">Seniors</label><input id="seniors_count" name="seniors_count" type="number" min="0" required value="0"></div>
+      <div class="field"><label for="rooms_required">Rooms required</label><input id="rooms_required" name="rooms_required" type="number" min="1" required value="1"></div>
+      <div class="field"><label for="travel_season">Travel season</label><select id="travel_season" name="travel_season" required><option>Snow_Winter_Dec_Feb</option><option>Lush_Monsoon_Jul_Aug</option><option>Chinar_Autumn_Sep_Nov</option><option>Peak_Summer_May_Jun</option><option>Tulip_Spring_Mar_Apr</option></select></div>
+      <div class="field"><label for="trip_purpose">Trip purpose</label><select id="trip_purpose" name="trip_purpose" required><option>Winter_Ski_Adventure</option><option>Senior_Leisure_Tour</option><option>Family_Vacation</option><option>Offbeat_Nature_Retreat</option><option>Alpine_Trekking</option><option>Honeymoon_Couple</option></select></div>
+      <div class="field"><label for="preferred_property_type">Preferred property type</label><select id="preferred_property_type" name="preferred_property_type" required><option>Boutique_Cottage</option><option>Luxury_Resort</option><option>JKTDC_Tourist_Bungalow</option><option>Hotel</option><option>Valley_Homestay</option><option>Heritage_Houseboat</option></select></div>
+      <div class="field"><label for="dietary_preference">Dietary preference</label><select id="dietary_preference" name="dietary_preference" required><option>Multi_Cuisine</option><option>Continental_Halal</option><option>Kashmiri_Wazwan</option><option>Pure_Veg_Jain</option></select></div>
+      <div class="field"><label for="district">District / destination</label><select id="district" name="district" required><option>Baramulla (Gulmarg)</option><option>Srinagar</option><option>Anantnag (Pahalgam)</option><option>Ganderbal (Sonamarg)</option><option>Shopian (Peer Ki Gali)</option><option>Kupwara (Lolab & Keran)</option><option>Kulgam (Aharbal)</option><option>Bandipora (Gurez Valley)</option><option>Pulwama (Tral & Shikargah)</option><option>Budgam (Yusmarg & Doodhpathri)</option></select></div>
+      <div class="field"><label for="property_type">Property type (dataset feature)</label><select id="property_type" name="property_type" required><option>Boutique_Cottage</option><option>Luxury_Resort</option><option>JKTDC_Tourist_Bungalow</option><option>Hotel</option><option>Valley_Homestay</option><option>Heritage_Houseboat</option></select></div>
+      <div class="field"><label for="star_category">Star category</label><select id="star_category" name="star_category" required><option>5</option><option>4</option><option selected>3</option><option>2</option><option>1</option><option>0</option></select></div>
+      <div class="field"><label for="google_rating">Google rating</label><input id="google_rating" name="google_rating" type="number" min="0" max="5" step="0.1" required value="4.8"></div>
+      <div class="field"><label for="review_count">Review count</label><input id="review_count" name="review_count" type="number" min="0" required value="2464"></div>
+      <div class="field"><label for="base_price_per_night_inr">Base price / night (INR)</label><input id="base_price_per_night_inr" name="base_price_per_night_inr" type="number" min="0" step="any" required value="13600"></div>
+      <div class="field"><label for="seasonal_room_rate_inr">Seasonal room rate (INR)</label><input id="seasonal_room_rate_inr" name="seasonal_room_rate_inr" type="number" min="0" step="any" required value="20150"></div>
+      <div class="field"><label for="estimated_total_stay_cost_inr">Estimated total stay cost (INR)</label><input id="estimated_total_stay_cost_inr" name="estimated_total_stay_cost_inr" type="number" min="0" step="any" required value="40300"></div>
+      <div class="field"><label for="budget_fit_ratio">Budget fit ratio</label><input id="budget_fit_ratio" name="budget_fit_ratio" type="number" min="0" step="any" required value="0.616"></div>
+      <div class="field"><label for="max_guests_per_room">Max guests per room</label><input id="max_guests_per_room" name="max_guests_per_room" type="number" min="1" required value="4"></div>
+      <div class="field"><label for="has_central_heating_bukhari">Central heating / bukhari available</label><select id="has_central_heating_bukhari" name="has_central_heating_bukhari"><option value="1">Yes (1)</option><option value="0">No (0)</option></select></div>
+      <div class="field"><label for="has_power_backup_24x7">24×7 power backup</label><select id="has_power_backup_24x7" name="has_power_backup_24x7"><option value="1">Yes (1)</option><option value="0">No (0)</option></select></div>
+      <div class="field"><label for="has_mountain_or_lake_view">Mountain / lake view</label><select id="has_mountain_or_lake_view" name="has_mountain_or_lake_view"><option value="1">Yes (1)</option><option value="0">No (0)</option></select></div>
+      <div class="field"><label for="has_wazwan_kitchen">Wazwan kitchen</label><select id="has_wazwan_kitchen" name="has_wazwan_kitchen"><option value="1">Yes (1)</option><option value="0">No (0)</option></select></div>
+      <div class="field"><label for="requires_central_heating">Requires central heating</label><select id="requires_central_heating" name="requires_central_heating"><option value="1">Yes (1)</option><option value="0">No (0)</option></select></div>
+      <div class="field"><label for="requires_scenic_view">Requires scenic view</label><select id="requires_scenic_view" name="requires_scenic_view"><option value="1">Yes (1)</option><option value="0">No (0)</option></select></div>
+      <div class="field"><label for="distance_to_sxr_airport_km">Distance to SXR airport (km)</label><input id="distance_to_sxr_airport_km" name="distance_to_sxr_airport_km" type="number" min="0" step="any" required value="56.5"></div>
+      <div class="field"><label for="distance_to_landmark_km">Distance to landmark (km)</label><input id="distance_to_landmark_km" name="distance_to_landmark_km" type="number" min="0" step="any" required value="1.1"></div>
+      <div class="field"><label for="latitude">Latitude</label><input id="latitude" name="latitude" type="number" step="any" required value="34.0403"></div>
+      <div class="field"><label for="longitude">Longitude</label><input id="longitude" name="longitude" type="number" step="any" required value="74.3789"></div>
+      <div class="field"><label for="altitude_m">Altitude (m)</label><input id="altitude_m" name="altitude_m" type="number" step="any" required value="2676"></div>
+      <div class="field"><label for="suitability_score">Suitability score</label><input id="suitability_score" name="suitability_score" type="number" step="any" required value="99.8"></div>
+    </div>
+    <div class="actions">
+      <button class="submit" type="submit">Predict recommendation</button>
+      <button class="reset" type="button" onclick="loadExample(0)">Restore example 1</button>
+    </div>
+  </form>
+  <p class="small">Model note: this page sends the fields to Flask in the listed order. The Python code deliberately does not implement OneHotEncoder or any other encoding.</p>
+</main>
+<script>
+const examples = [
+  {
+    user_budget_total_inr:65400,user_daily_budget_inr:32700,stay_days:2,family_count:4,adults_count:4,children_count:0,seniors_count:0,rooms_required:1,
+    travel_season:"Snow_Winter_Dec_Feb",trip_purpose:"Winter_Ski_Adventure",preferred_property_type:"Boutique_Cottage",requires_central_heating:1,requires_scenic_view:1,dietary_preference:"Multi_Cuisine",district:"Baramulla (Gulmarg)",property_type:"Boutique_Cottage",star_category:5,google_rating:4.8,review_count:2464,base_price_per_night_inr:13600,seasonal_room_rate_inr:20150,estimated_total_stay_cost_inr:40300,budget_fit_ratio:0.616,max_guests_per_room:4,has_central_heating_bukhari:1,has_power_backup_24x7:1,has_mountain_or_lake_view:1,has_wazwan_kitchen:1,distance_to_sxr_airport_km:56.5,distance_to_landmark_km:1.1,latitude:34.0403,longitude:74.3789,altitude_m:2676,suitability_score:99.8
+  },
+  {
+    user_budget_total_inr:176400,user_daily_budget_inr:19600,stay_days:9,family_count:3,adults_count:3,children_count:0,seniors_count:0,rooms_required:1,
+    travel_season:"Snow_Winter_Dec_Feb",trip_purpose:"Offbeat_Nature_Retreat",preferred_property_type:"Valley_Homestay",requires_central_heating:1,requires_scenic_view:0,dietary_preference:"Kashmiri_Wazwan",district:"Srinagar",property_type:"Valley_Homestay",star_category:3,google_rating:4.5,review_count:687,base_price_per_night_inr:5500,seasonal_room_rate_inr:5500,estimated_total_stay_cost_inr:49500,budget_fit_ratio:0.281,max_guests_per_room:3,has_central_heating_bukhari:1,has_power_backup_24x7:1,has_mountain_or_lake_view:1,has_wazwan_kitchen:0,distance_to_sxr_airport_km:24.2,distance_to_landmark_km:1,latitude:34.1537,longitude:74.8941,altitude_m:1741,suitability_score:99.8
+  },
+  {
+    user_budget_total_inr:122500,user_daily_budget_inr:17500,stay_days:7,family_count:5,adults_count:4,children_count:1,seniors_count:0,rooms_required:2,
+    travel_season:"Snow_Winter_Dec_Feb",trip_purpose:"Winter_Ski_Adventure",preferred_property_type:"Boutique_Cottage",requires_central_heating:1,requires_scenic_view:0,dietary_preference:"Multi_Cuisine",district:"Baramulla (Gulmarg)",property_type:"Boutique_Cottage",star_category:5,google_rating:4.3,review_count:1228,base_price_per_night_inr:13300,seasonal_room_rate_inr:18350,estimated_total_stay_cost_inr:256900,budget_fit_ratio:2.097,max_guests_per_room:4,has_central_heating_bukhari:1,has_power_backup_24x7:1,has_mountain_or_lake_view:1,has_wazwan_kitchen:1,distance_to_sxr_airport_km:57.4,distance_to_landmark_km:2.5,latitude:34.0439,longitude:74.3781,altitude_m:2683,suitability_score:54.6
+  }
+];
+function loadExample(index) {
+  const data = examples[index];
+  for (const [key, value] of Object.entries(data)) {
+    const field = document.getElementById(key);
+    if (field) field.value = String(value);
+  }
+  document.getElementById("hotel-form").scrollIntoView({behavior:"smooth", block:"start"});
+}
+</script>
+</body>
+</html>
